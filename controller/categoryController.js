@@ -57,28 +57,57 @@ exports.createCategory = async (req, res) => {
 
 
 // Cập nhật một category
+// Cập nhật category
 exports.updateCategory = async (req, res) => {
+    const { id } = req.params; // ID của category
+    const { name, description } = req.body; // Tên và mô tả
+
+    if (!name || !description) {
+        return res.status(400).json({
+            status: false,
+            message: "Both category_name and category_description must be provided",
+        });
+    }
+
     try {
-        const { id } = req.params;
-        const { name, description } = req.body;
-        const category = await Category.findByPk(id);
-        if (!category) return res.status(404).json({ message: "Category not found" });
-        await category.update({ name, description });
-        res.status(200).json(category);
+        const result = await db.any(
+            `SELECT public.update_category_json($1, $2, $3) AS result`,
+            [id, name, description]
+        );
+
+        const response = result[0].result;
+        res.status(response.status).json(response);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({
+            status: false,
+            message: error.message,
+        });
     }
 };
 
+
+
 // Xóa một category
 exports.deleteCategory = async (req, res) => {
+    const { id } = req.params;
     try {
-        const { id } = req.params;
-        const category = await Category.findByPk(id);
-        if (!category) return res.status(404).json({ message: "Category not found" });
-        await category.destroy();
-        res.status(200).json({ message: "Category deleted successfully" });
+        const result = await db.one(
+            `SELECT public.delete_category_json($1) AS result`,
+            [id]
+        );
+
+        const resultData = result.result;
+
+        if (resultData.status === 200) {
+            res.status(200).json(resultData);
+        } else {
+            res.status(400).json({
+                status: resultData.status,
+                error: resultData.error
+            });
+        }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ status: false, message: error.message });
     }
 };
+

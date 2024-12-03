@@ -30,12 +30,13 @@ exports.getPostById = async (req, res) => {
 // Tạo một post mới
 exports.createPost = async (req, res) => {
     try {
-        const { title, image, content, author, categoryId, highlightOrder } = req.body;
+        const { title, image, content, author, categoryId, highlightOrder, isVisible } = req.body;
 
         // Kiểm tra xem categoryId có tồn tại không
         const category = await Category.findByPk(categoryId);
         if (!category) return res.status(404).json({ message: "Category not found" });
 
+        // Tạo bài viết mới
         const newPost = await Post.create({
             title,
             image,
@@ -43,19 +44,25 @@ exports.createPost = async (req, res) => {
             author,
             highlightOrder,
             CategoryId: categoryId,
+            isVisible: isVisible || true,  // Nếu không có isVisible thì mặc định là true
         });
 
-        res.status(201).json(newPost);
+        // Trả về thông tin bài viết mới
+        res.status(201).json({
+            message: "Post created successfully",
+            data: newPost,
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
 
+
 // Cập nhật một post
 exports.updatePost = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, image, content, author, categoryId, highlightOrder } = req.body;
+        const { title, image, content, author, categoryId, highlightOrder, isVisible } = req.body;
 
         const post = await Post.findByPk(id);
         if (!post) return res.status(404).json({ message: "Post not found" });
@@ -64,6 +71,7 @@ exports.updatePost = async (req, res) => {
         const category = await Category.findByPk(categoryId);
         if (!category) return res.status(404).json({ message: "Category not found" });
 
+        // Cập nhật bài viết
         await post.update({
             title,
             image,
@@ -71,13 +79,18 @@ exports.updatePost = async (req, res) => {
             author,
             highlightOrder,
             CategoryId: categoryId,
+            isVisible: isVisible !== undefined ? isVisible : post.isVisible,  // Cập nhật trạng thái hiển thị nếu có
         });
 
-        res.status(200).json(post);
+        res.status(200).json({
+            message: "Post updated successfully",
+            post
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
+
 
 // Xóa một post
 exports.deletePost = async (req, res) => {

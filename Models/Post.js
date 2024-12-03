@@ -1,4 +1,3 @@
-// File: server/Models/Post.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../postgresql').sequelize;
 const Category = require('./Category');
@@ -26,6 +25,12 @@ const Post = sequelize.define('Post', {
         defaultValue: 0,
         allowNull: true,
     },
+    // Thêm thuộc tính mới 'isVisible' để xác định bài viết có đang hiển thị không
+    isVisible: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,  // Mặc định là bài viết hiển thị
+        allowNull: false,
+    }
 });
 
 // Quan hệ: một bài viết thuộc về một category
