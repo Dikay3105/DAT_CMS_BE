@@ -1,4 +1,4 @@
-const CategoryHighlight = require("../models/CategoryHighlight");
+const CategoryHighlight = require("../Models/CategoryHighlight");
 const Post = require("../Models/Post");
 const Category = require("../Models/Category");
 const { db } = require('../postgresql'); // Đảm bảo bạn đã kết nối với PostgreSQL
