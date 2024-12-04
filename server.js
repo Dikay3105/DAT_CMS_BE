@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const apiRouter = require("./route/apiRoutes"); // Đảm bảo chỉ import đúng tên file
 const { syncDatabase } = require("./postgresql");
+const path = require('path');
 
 const app = express();
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
