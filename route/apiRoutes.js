@@ -15,14 +15,14 @@ router.delete("/categories/:id", categoryController.deleteCategory);
 router.get("/posts", postController.getAllPosts);
 router.get("/posts/:id", postController.getPostById);
 router.post("/posts", postController.createPost);
+router.post("/posts/highlight", postController.updatePostHighlightOrder);
 router.put("/posts/:id", postController.updatePost);
 router.delete("/posts/:id", postController.deletePost);
+router.get("/posts/highlight-posts/:category_id", postController.getHighlightCategoryPosts);
+router.get("/posts/category/:category_id", postController.getPostsByCategory);
 
-// CategoryHighlight routes
-router.get("/category-highlights", categoryHighlightController.getAllCategoryHighlights);
-router.get("/category-highlights/:id", categoryHighlightController.getCategoryHighlightById);
-router.post("/category-highlights", categoryHighlightController.createCategoryHighlight);
-router.put("/category-highlights/:id", categoryHighlightController.updateCategoryHighlight);
-router.delete("/category-highlights/:id", categoryHighlightController.deleteCategoryHighlight);
+// Category Highlight routes
+router.put("/category-highlights", categoryHighlightController.updateCategoryHighlightOrder);
+
 
 module.exports = router;
