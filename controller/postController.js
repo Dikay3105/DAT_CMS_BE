@@ -1,23 +1,9 @@
 const Post = require("../Models/Post");
 const Category = require("../Models/Category");
-const multer = require("multer");
-const path = require("path");
+
 const { db } = require("../postgresql");
 
-// Cấu hình multer để lưu trữ ảnh
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        // Đường dẫn nơi ảnh sẽ được lưu trữ
-        cb(null, "uploads/");
-    },
-    filename: (req, file, cb) => {
-        // Tạo tên file từ thời gian hiện tại và tên file gốc
-        cb(null, Date.now() + path.extname(file.originalname));
-    },
-});
 
-// Tạo middleware multer
-const upload = multer({ storage: storage });
 
 // Lấy tất cả posts
 exports.getAllPosts = async (req, res) => {
