@@ -5,6 +5,7 @@ const apiRouter = require("./route/apiRoutes"); // Đảm bảo chỉ import đ�
 const { syncDatabase } = require("./postgresql");
 
 const app = express();
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const PORT = process.env.APP_PORT || 4000;
 
 // Cấu hình danh sách các domain được phép kết nối
