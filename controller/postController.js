@@ -1,6 +1,23 @@
 const Post = require("../Models/Post");
 const Category = require("../Models/Category");
+const multer = require("multer");
+const path = require("path");
 const { db } = require("../postgresql");
+
+// Cấu hình multer để lưu trữ ảnh
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        // Đường dẫn nơi ảnh sẽ được lưu trữ
+        cb(null, "uploads/");
+    },
+    filename: (req, file, cb) => {
+        // Tạo tên file từ thời gian hiện tại và tên file gốc
+        cb(null, Date.now() + path.extname(file.originalname));
+    },
+});
+
+// Tạo middleware multer
+const upload = multer({ storage: storage });
 
 // Lấy tất cả posts
 exports.getAllPosts = async (req, res) => {
@@ -32,7 +49,10 @@ exports.getPostById = async (req, res) => {
 // Tạo một post mới
 exports.createPost = async (req, res) => {
     try {
-        const { title, image, content, author, categoryId, highlightOrder } = req.body;
+        const { title, content, author, categoryId, highlightOrder } = req.body;
+
+        // Lấy thông tin ảnh từ file upload
+        const image = req.file ? `uploads/${req.file.filename}` : null; // Đảm bảo đường dẫn ảnh hợp lệ
 
         // Gọi function PostgreSQL
         const result = await db.any(
@@ -46,12 +66,12 @@ exports.createPost = async (req, res) => {
         if (resultData) {
             res.status(201).json({
                 status: 200,
-                data: resultData
+                data: resultData,
             });
         } else {
             res.status(400).json({
                 status: 400,
-                error: 'Failed to add post'
+                error: "Failed to add post",
             });
         }
     } catch (error) {
@@ -63,7 +83,10 @@ exports.createPost = async (req, res) => {
 exports.updatePost = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, image, content, author, categoryId, highlightOrder } = req.body;
+        const { title, content, author, categoryId, highlightOrder } = req.body;
+
+        // Lấy thông tin ảnh từ file upload nếu có
+        const image = req.file ? `uploads/${req.file.filename}` : null;
 
         // Gọi function PostgreSQL
         const result = await db.any(
@@ -72,8 +95,6 @@ exports.updatePost = async (req, res) => {
         );
 
         // Xử lý kết quả trả về
-        const resultData = result[0].result;
-
         const response = result[0].result;
         res.status(response.status).json(response);
     } catch (error) {
@@ -176,6 +197,24 @@ exports.getPostsByCategory = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+// exports.getPostsByCategory = async (req, res) => {
+//     const { category_id } = req.params;
+
+//     try {
+//         // Gọi hàm PostgreSQL với category_id làm tham số
+//         const posts = await db.any(
+//             'SELECT * FROM public.get_posts_by_category($1)',
+//             [category_id]
+//         );
+
+//         // Trả về kết quả
+//         res.status(200).json(posts);
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ error: error.message });
+//     }
+// };
 
 
 

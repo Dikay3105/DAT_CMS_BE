@@ -14,9 +14,9 @@ router.delete("/categories/:id", categoryController.deleteCategory);
 // Post routes
 router.get("/posts", postController.getAllPosts);
 router.get("/posts/:id", postController.getPostById);
-router.post("/posts", postController.createPost);
+router.post("/posts", upload.single('image'), postController.createPost);
 router.post("/posts/highlight", postController.updatePostHighlightOrder);
-router.put("/posts/:id", postController.updatePost);
+router.put("/posts/:id", upload.single('image'), postController.updatePost);
 router.delete("/posts/:id", postController.deletePost);
 router.get("/posts/highlight-posts/:category_id", postController.getHighlightCategoryPosts);
 router.get("/posts/category/:category_id", postController.getPostsByCategory);
