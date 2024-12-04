@@ -1,5 +1,5 @@
-const Post = require("../models/Post");
-const Category = require("../models/Category");
+const Post = require("../Models/Post");
+const Category = require("../Models/Category");
 const { db } = require("../postgresql");
 
 // Lấy tất cả posts

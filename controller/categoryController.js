@@ -1,4 +1,4 @@
-const Category = require("../models/Category");
+const Category = require("../Models/Category");
 const { db } = require("../postgresql");
 
 // Lấy tất cả categories

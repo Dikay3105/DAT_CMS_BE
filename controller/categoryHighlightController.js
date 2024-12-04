@@ -1,6 +1,6 @@
 const CategoryHighlight = require("../models/CategoryHighlight");
-const Post = require("../models/Post");
-const Category = require("../models/Category");
+const Post = require("../Models/Post");
+const Category = require("../Models/Category");
 const { db } = require('../postgresql'); // Đảm bảo bạn đã kết nối với PostgreSQL
 
 // Cập nhật highlightOrder của bài viết
