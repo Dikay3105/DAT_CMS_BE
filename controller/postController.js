@@ -160,19 +160,23 @@ exports.getPostsByCategory = async (req, res) => {
     const { category_id } = req.params;
 
     try {
-        // Gọi hàm PostgreSQL với category_id làm tham số
-        const posts = await db.any(
-            'SELECT * FROM public.get_posts_by_category($1)',
-            [category_id]
-        );
+        const posts = await Post.findAll({
+            include: [
+                {
+                    model: Category,
+                    where: { id: category_id }, // Lọc theo category_id
+                },
+            ],
+            order: [["createdAt", "DESC"]], // Sắp xếp theo ngày tạo giảm dần
+        });
 
-        // Trả về kết quả
         res.status(200).json(posts);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: error.message });
     }
 };
+
 
 
 
