@@ -5,7 +5,7 @@ const funcJSON = (func, data) => {
         try {
             db.SELECT('*', `${func}${data}`, '', function (result) {
                 if (result.rowCount >= 1) {
-                    resolve(result.rows[0][func]);
+                    resolve((result.rows[0][func]));
                 } else {
                     resolve({ status: false, number: 254, mess: "DB Err" });
                 }
