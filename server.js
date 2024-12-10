@@ -1,26 +1,32 @@
 require("dotenv").config({ path: `${process.cwd()}/.env` });
-const express = require("express");
-const cors = require("cors");
-const apiRouter = require("./route/apiRoutes"); // Đảm bảo chỉ import đúng tên file
-const { syncDatabase } = require("./postgresql");
-const path = require('path');
-
-const app = express();
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const PORT = process.env.APP_PORT || 4000;
+const express = require("express");
+const app = express();
+const cors = require("cors");
+const apiRouter = require("./route/data.js");
+const db = require("./postgresql.js");
+const bodyParser = require("body-parser");
 
-// Cấu hình danh sách các domain được phép kết nối
-const allowedOrigins = [
+const host = [
     "http://localhost:3000",
     "http://192.168.68.49",
     "http://192.168.68.49:3002",
-];
+]
 
-// Cấu hình CORS
+db.connection()
+    .then(() => {
+        console.log("Postgres connected");
+    })
+    .catch((err) => {
+        console.log("Connection error:", err.message);
+    });
+
+
 app.use(
     cors({
         origin: (origin, callback) => {
-            if (allowedOrigins.includes(origin) || !origin) {
+            // console.log("Request origin:", origin);
+            if (host.indexOf(origin) !== -1 || !origin) {
                 callback(null, true);
             } else {
                 console.log("Not allowed by CORS");
@@ -28,38 +34,30 @@ app.use(
             }
         },
         credentials: true,
+        optionsSuccessStatus: 200,
     })
 );
 
-// Middleware xử lý body request
+app.use(bodyParser.json());
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Định tuyến API
 app.use("/api", apiRouter);
 
-// Xử lý các route không tồn tại
 app.use("*", (req, res) => {
     res.status(404).json({
         status: "Not Found",
-        message: "Route not found",
+        mess: "Route not found",
     });
 });
 
-// Xử lý lỗi server
 app.use((err, req, res, next) => {
     console.error(err.stack);
-    res.status(500).send("Something broke!");
+    res.status(500).send('Something broke!');
 });
 
-// Kết nối với cơ sở dữ liệu và khởi động server
-syncDatabase()
-    .then(() => {
-        app.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
-        });
-    })
-    .catch((err) => {
-        console.error("Failed to sync database:", err.message);
-        process.exit(1); // Thoát ứng dụng nếu không thể kết nối database
-    });
+
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
