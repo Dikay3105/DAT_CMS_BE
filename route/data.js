@@ -7,21 +7,28 @@ const categoryController = require("../controller/categoryController");
 const postController = require("../controller/postController");
 const categoryHighlightController = require("../controller/categoryHighlightController");
 const data = require("./dataProcess");
+const mime = require('mime-types');
 
-// Cấu hình multer để lưu trữ ảnh
+
+// Thiết lập multer để upload file
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        // Đường dẫn nơi ảnh sẽ được lưu trữ
-        cb(null, "uploads/");
+        const uploadDir = path.join(__dirname, '..', 'uploads');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        // Tạo tên file từ thời gian hiện tại và tên file gốc
-        cb(null, Date.now() + path.extname(file.originalname));
-    },
+        // Lấy phần mở rộng từ MIME type của tệp (ví dụ image/jpeg -> .jpg)
+        const extname = mime.extension(file.mimetype);  // Lấy phần mở rộng từ MIME type
+        cb(null, Date.now() + '.' + extname);  // Đặt tên tệp với thời gian và phần mở rộng
+    }
 });
 
-// Tạo middleware multer
 const upload = multer({ storage: storage });
+
+
 
 // Category routes
 router.get("/categories", async (req, res) => {
@@ -38,6 +45,16 @@ router.get("/categories", async (req, res) => {
 router.get("/posts", async (req, res) => {
     try {
         const result = await data.funcTable('func_getAllPosts', '()');
+        res.status(200).json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: false, mess: "Internal Server Error", error });
+    }
+});
+
+router.get("/postsAdmin", async (req, res) => {
+    try {
+        const result = await data.funcTable('func_getallpostsadmin', '()');
         res.status(200).json(result);
     } catch (error) {
         console.error(error);
@@ -73,7 +90,7 @@ router.post("/posts", upload.single('image'), async (req, res) => {
         const url = `uploads/${req.file.filename}`;
 
         // Thêm bài viết vào cơ sở dữ liệu và nhận ID bài viết mới
-        const result = await data.funcJSON('func_addpost', `( '${title}', '${url}', '${content}', '${author}', ${categoryId}, ${highlightOrder || 0})`);
+        const result = await data.funcJSON('func_addpost', `( '${title}', '${url}', '${content}', '${author}', ${categoryId}, ${highlightOrder || NULL})`);
 
         if (!result || !result.data) {
             return res.status(500).json({ status: false, message: "No response from database" });
@@ -173,46 +190,35 @@ router.put("/posts/:id", upload.single('image'), async (req, res) => {
     }
 });
 
-router.post("/upload-image/:postID", upload.single('image'), async (req, res) => {
+router.post("/upload-image/:postID", upload.single("image"), async (req, res) => {
     try {
-        const { postID } = req.params; // Lấy postID từ URL
+        const { postID } = req.params;
         const { file } = req;
 
         if (!file) {
             return res.status(400).json({ status: false, message: "No file uploaded" });
         }
 
-        // Tạo thư mục mới cho bài viết nếu chưa có
-        const uploadDir = path.join(__dirname, '..', 'uploads');
-        const postDir = path.join(uploadDir, `${id}`);
-
+        const postDir = path.join(__dirname, '..', 'uploads', postID);
         if (!fs.existsSync(postDir)) {
             fs.mkdirSync(postDir, { recursive: true });
         }
 
-        const newFilePath = path.join(postDir, req.file.filename);
-        const tempFilePath = path.join(uploadDir, req.file.filename);
+        const newFilePath = path.join(postDir, file.filename);
+        fs.renameSync(file.path, newFilePath);
 
-        if (fs.existsSync(tempFilePath)) {
-            fs.renameSync(tempFilePath, newFilePath); // Di chuyển file vào thư mục bài viết
-            imageUrl = newImage;
-        } else {
-            return res.status(400).json({ status: false, message: "Uploaded file not found" });
-        }
-
-        // Tạo đường dẫn mới cho ảnh sau khi đã tải lên
         const imageUrl = `uploads/${postID}/${file.filename}`;
-
         res.status(200).json({
             status: true,
             message: "Image uploaded successfully",
-            imageUrl: imageUrl, // Đường dẫn ảnh mới
+            imageUrl: imageUrl,
         });
     } catch (error) {
         console.error("Error uploading image:", error.message);
         res.status(500).json({ status: false, message: "Server error", error: error.message });
     }
 });
+
 
 // Category Highlight routes
 router.put("/category-highlights", categoryHighlightController.updateCategoryHighlightOrder);

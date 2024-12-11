@@ -6,6 +6,7 @@ const cors = require("cors");
 const apiRouter = require("./route/data.js");
 const db = require("./postgresql.js");
 const bodyParser = require("body-parser");
+const path = require('path');
 
 const host = [
     "http://localhost:3000",
@@ -37,6 +38,8 @@ app.use(
         optionsSuccessStatus: 200,
     })
 );
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use(bodyParser.json());
 
