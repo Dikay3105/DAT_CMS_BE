@@ -81,6 +81,7 @@ router.get("/posts/:id", async (req, res) => {
 router.post("/posts", upload.single('image'), async (req, res) => {
     try {
         const { title, content, author, categoryId, highlightOrder } = req.body;
+        console.log(author)
 
         // Kiểm tra nếu có trường bị thiếu
         if (!title || !content || !author || !categoryId || !req.file) {
@@ -90,7 +91,7 @@ router.post("/posts", upload.single('image'), async (req, res) => {
         const url = `uploads/${req.file.filename}`;
 
         // Thêm bài viết vào cơ sở dữ liệu và nhận ID bài viết mới
-        const result = await data.funcJSON('func_addpost', `( '${title}', '${url}', '${content}', '${author}', ${categoryId}, ${highlightOrder || NULL})`);
+        const result = await data.funcJSON('func_addpost', `( '${title}', '${url}', '${content}', '${author}', ${categoryId}, ${highlightOrder || null})`);
 
         if (!result || !result.data) {
             return res.status(500).json({ status: false, message: "No response from database" });
@@ -177,6 +178,7 @@ router.put("/posts/:id", upload.single('image'), async (req, res) => {
         }
 
         // Cập nhật bài viết trong database
+
         const result = await data.funcJSON('func_updatepost', `( ${id}, '${title}', '${imageUrl}', '${content}', '${author}', ${categoryId} )`);
 
         if (!result || result.status !== 200) {
@@ -218,6 +220,44 @@ router.post("/upload-image/:postID", upload.single("image"), async (req, res) =>
         res.status(500).json({ status: false, message: "Server error", error: error.message });
     }
 });
+
+router.delete("/delete-images/:postID", async (req, res) => {
+    try {
+        const { postID } = req.params;
+
+        // Đường dẫn tới folder chứa hình ảnh của postID
+        const postDir = path.join(__dirname, '..', 'uploads', postID);
+
+        // Kiểm tra xem folder có tồn tại không
+        if (!fs.existsSync(postDir)) {
+            return res.status(404).json({
+                status: false,
+                message: `Folder for postID ${postID} not found`,
+            });
+        }
+
+        // Đọc danh sách file trong folder
+        const files = fs.readdirSync(postDir);
+
+        // Xóa từng file trong folder
+        files.forEach((file) => {
+            const filePath = path.join(postDir, file);
+            fs.unlinkSync(filePath); // Xóa file
+        });
+
+        // Sau khi xóa file, có thể xóa folder nếu cần
+        // fs.rmdirSync(postDir);
+
+        res.status(200).json({
+            status: true,
+            message: `All images for postID ${postID} have been deleted`,
+        });
+    } catch (error) {
+        console.error("Error deleting images:", error.message);
+        res.status(500).json({ status: false, message: "Server error", error: error.message });
+    }
+});
+
 
 
 // Category Highlight routes
