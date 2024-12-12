@@ -52,31 +52,6 @@ router.get("/posts", async (req, res) => {
     }
 });
 
-router.get("/postsAdmin", async (req, res) => {
-    try {
-        const result = await data.funcTable('func_getallpostsadmin', '()');
-        res.status(200).json(result);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ status: false, mess: "Internal Server Error", error });
-    }
-});
-
-router.get("/posts/:id", async (req, res) => {
-    const { id } = req.params;
-    if (!id) {
-        return res.status(400).json({ status: false, number: 253, mes: "Format Err" });
-    }
-
-    try {
-        const result = await data.funcJSON('func_getpostbyid', `('${id}')`);
-        res.status(200).json(result);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ status: false, mess: "Internal Server Error", error });
-    }
-});
-
 // Thêm bài viết mới
 router.post("/posts", upload.single('image'), async (req, res) => {
     try {
@@ -97,7 +72,7 @@ router.post("/posts", upload.single('image'), async (req, res) => {
             return res.status(500).json({ status: false, message: "No response from database" });
         }
 
-        const postId = result.data.id; // Lấy ID bài viết từ kết quả trả về
+        const postId = result.data._id; // Lấy ID bài viết từ kết quả trả về
 
         // Tạo thư mục với tên là ID của bài viết trong thư mục uploads
         const uploadDir = path.join(__dirname, '..', 'uploads');
@@ -192,6 +167,58 @@ router.put("/posts/:id", upload.single('image'), async (req, res) => {
     }
 });
 
+router.delete("/posts/:postId", async (req, res) => {
+    const { postId } = req.params;
+
+    try {
+        // Gọi function func_delete_post_json trong database
+        const result = await data.funcTable('func_delete_post_json', `(${postId})`);
+
+        // Kiểm tra status trả về từ function
+        if (result.status === 404) {
+            return res.status(404).json(result);
+        }
+
+        // Trả về kết quả thành công
+        res.status(200).json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            status: false,
+            message: "Internal Server Error",
+            error,
+        });
+    }
+});
+
+
+router.get("/postsAdmin", async (req, res) => {
+    try {
+        const result = await data.funcTable('func_getallpostsadmin', '()');
+        res.status(200).json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: false, mess: "Internal Server Error", error });
+    }
+});
+
+router.get("/posts/:id", async (req, res) => {
+    const { id } = req.params;
+    if (!id) {
+        return res.status(400).json({ status: false, number: 253, mes: "Format Err" });
+    }
+
+    try {
+        const result = await data.funcJSON('func_getpostbyid', `('${id}')`);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ status: false, mess: "Internal Server Error", error });
+    }
+});
+
+
+
 router.post("/upload-image/:postID", upload.single("image"), async (req, res) => {
     try {
         const { postID } = req.params;
@@ -258,7 +285,136 @@ router.delete("/delete-images/:postID", async (req, res) => {
     }
 });
 
+router.delete("/delete-images-folder/:postID", async (req, res) => {
+    try {
+        const { postID } = req.params;
 
+        // Đường dẫn tới folder chứa hình ảnh của postID
+        const postDir = path.join(__dirname, '..', 'uploads', postID);
+
+        // Kiểm tra xem folder có tồn tại không
+        if (!fs.existsSync(postDir)) {
+            return res.status(404).json({
+                status: false,
+                message: `Folder for postID ${postID} not found`,
+            });
+        }
+        fs.rmdirSync(postDir);
+
+        res.status(200).json({
+            status: true,
+            message: `Folder postID ${postID} have been deleted`,
+        });
+    } catch (error) {
+        console.error("Error deleting folder:", error.message);
+        res.status(500).json({ status: false, message: "Server error", error: error.message });
+    }
+});
+
+router.put("/highlightPost", async (req, res) => {
+    console.log("Request body:", req.body);
+    const { postId, highlightOrder } = req.body;
+
+    // Kiểm tra nếu thiếu trường
+    if (!postId || highlightOrder === undefined || highlightOrder === null) {
+        return res.status(400).json({ status: false, number: 253, mes: "Format Err" });
+    }
+
+    try {
+        const result = await data.funcJSON('func_update_post_highlight_json', `( ${postId}, ${highlightOrder} )`);
+
+        if (!result) {
+            return res.status(500).json({ status: false, message: "Database did not return a response." });
+        }
+
+        // Xử lý phản hồi từ hàm PostgreSQL
+        const { status, message, data: responseData } = result;
+
+        // Nếu phản hồi không thành công
+        if (status !== 200) {
+            return res.status(400).json({ status: false, message });
+        }
+
+        // Thành công
+        return res.status(200).json({
+            status: true,
+            message,
+            data: responseData,
+        });
+
+    } catch (error) {
+        console.error("Error:", error.message);
+        res.status(500).json({ status: false, message: "Server Error", error: error.message });
+    }
+});
+
+router.put("/highlightCategory", async (req, res) => {
+    const { postId, highlightOrder } = req.body;
+
+    // Kiểm tra nếu thiếu trường
+    if (!postId || highlightOrder === undefined) {
+        return res.status(400).json({ status: false, number: 253, mes: "Format Err" });
+    }
+
+    try {
+        // Gọi hàm PostgreSQL
+        const result = await data.funcJSON('func_update_category_highlight_json', `( ${postId}, ${highlightOrder} )`);
+
+        if (!result) {
+            return res.status(500).json({ status: false, message: "Database did not return a response." });
+        }
+
+        // Xử lý phản hồi từ hàm PostgreSQL
+        const { status, message, data: responseData } = result;
+
+        // Nếu phản hồi không thành công
+        if (status !== 200) {
+            return res.status(400).json({ status: false, message });
+        }
+
+        // Thành công
+        return res.status(200).json({
+            status: true,
+            message,
+            data: responseData,
+        });
+
+    } catch (error) {
+        console.error("Error:", error.message);
+        res.status(500).json({ status: false, message: "Server Error", error: error.message });
+    }
+});
+
+
+// exports.updatePostHighlightOrder = async (req, res) => {
+//     try {
+//         const { postId, highlightOrder } = req.body;
+
+//         // Gọi function PostgreSQL
+//         const result = await db.any(
+//             `SELECT public.update_post_highlight_json($1, $2) AS result`,
+//             [postId, highlightOrder]
+//         );
+
+//         const resultData = result[0].result;
+
+//         if (resultData.status === 200) {
+//             res.status(200).json({
+//                 status: 200,
+//                 message: resultData.message,
+//                 postId: resultData.postId,
+//                 newHighlightOrder: resultData.newHighlightOrder
+//             });
+//         } else {
+//             res.status(resultData.status).json({
+//                 status: resultData.status,
+//                 message: resultData.message
+//             });
+//         }
+//     } catch (error) {
+//         res.status(500).json({ error: error.message });
+//     }
+// };
 
 // Category Highlight routes
 router.put("/category-highlights", categoryHighlightController.updateCategoryHighlightOrder);
