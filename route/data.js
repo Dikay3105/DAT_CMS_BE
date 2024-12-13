@@ -172,39 +172,40 @@ router.delete("/posts/:postId", async (req, res) => {
 
     try {
         // Gọi function func_delete_post_json trong database
-        const result = await data.funcTable('func_delete_post_json', `(${postId})`);
+        const result = await data.funcJSON('func_delete_post_json', `(${postId})`);
 
         // Kiểm tra status trả về từ function
         if (result.status === 404) {
-            return res.status(404).json(result);
+            return res.status(404).json(result); // Trả về nếu không tìm thấy
+        }
+
+        // Đường dẫn tới folder chứa hình ảnh của postID
+        const postDir = path.join(__dirname, '..', 'uploads', postId);
+
+        // Kiểm tra xem folder có tồn tại không
+        if (!fs.existsSync(postDir)) {
+            return res.status(404).json({
+                status: false,
+                message: `Folder for postID ${postId} not found`,
+            });
         }
 
         try {
-            // Đường dẫn tới folder chứa hình ảnh của postID
-            const postDir = path.join(__dirname, '..', 'uploads', postId);
-
-            // Kiểm tra xem folder có tồn tại không
-            if (!fs.existsSync(postDir)) {
-                return res.status(404).json({
-                    status: false,
-                    message: `Folder for postID ${postId} not found`,
-                });
-            }
-            fs.rmdirSync(postDir);
-
+            // Xóa folder và tất cả nội dung bên trong
+            fs.rmSync(postDir, { recursive: true, force: true });
         } catch (error) {
             console.error("Error deleting folder:", error.message);
-            res.status(500).json({ status: false, message: "Server error", error: error.message });
+            return res.status(500).json({ status: false, message: "Server error", error: error.message });
         }
 
         // Trả về kết quả thành công
-        res.status(200).json(result);
+        return res.status(200).json(result);
     } catch (error) {
         console.error(error);
-        res.status(500).json({
+        return res.status(500).json({
             status: false,
             message: "Internal Server Error",
-            error,
+            error: error.message,
         });
     }
 });
