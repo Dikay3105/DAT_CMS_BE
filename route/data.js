@@ -179,6 +179,24 @@ router.delete("/posts/:postId", async (req, res) => {
             return res.status(404).json(result);
         }
 
+        try {
+            // Đường dẫn tới folder chứa hình ảnh của postID
+            const postDir = path.join(__dirname, '..', 'uploads', postId);
+
+            // Kiểm tra xem folder có tồn tại không
+            if (!fs.existsSync(postDir)) {
+                return res.status(404).json({
+                    status: false,
+                    message: `Folder for postID ${postId} not found`,
+                });
+            }
+            fs.rmdirSync(postDir);
+
+        } catch (error) {
+            console.error("Error deleting folder:", error.message);
+            res.status(500).json({ status: false, message: "Server error", error: error.message });
+        }
+
         // Trả về kết quả thành công
         res.status(200).json(result);
     } catch (error) {
