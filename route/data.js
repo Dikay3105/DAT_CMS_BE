@@ -3,9 +3,6 @@ const router = express.Router();
 const multer = require("multer");
 const fs = require('fs');
 const path = require("path");
-const categoryController = require("../controller/categoryController");
-const postController = require("../controller/postController");
-const categoryHighlightController = require("../controller/categoryHighlightController");
 const data = require("./dataProcess");
 const mime = require('mime-types');
 
@@ -28,8 +25,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-
-
 // Category routes
 router.get("/categories", async (req, res) => {
     try {
@@ -40,6 +35,7 @@ router.get("/categories", async (req, res) => {
         res.status(500).json({ status: false, mess: "Internal Server Error", error });
     }
 });
+//...............................
 
 // Post routes
 router.get("/posts", async (req, res) => {
@@ -78,7 +74,7 @@ router.post("/posts", upload.single('image'), async (req, res) => {
         const uploadDir = path.join(__dirname, '..', 'uploads');
         const postDir = path.join(uploadDir, `${postId}`);
 
-        // Kiểm tra xem thư mục với ID bài viết có tồn tại chưa, nếu chưa thì tạo mới
+        // Kiểm tra xem thư mục với ID bài viết có tồn tại ko
         if (!fs.existsSync(postDir)) {
             fs.mkdirSync(postDir);
         }
@@ -110,10 +106,9 @@ router.put("/posts/:id", upload.single('image'), async (req, res) => {
     }
 
     try {
-        // Lấy bài viết hiện tại từ database
         const existingPost = await data.funcJSON('func_getpostbyid', `( ${id} )`);
         if (!existingPost || !existingPost.data) {
-            return res.status(404).json({ status: false, message: "Post not found" });
+            return res.status(252).json({ status: false, message: "Post not found" });
         }
 
         const oldImage = existingPost.data._image; // Lấy hình cũ từ database
@@ -147,7 +142,7 @@ router.put("/posts/:id", upload.single('image'), async (req, res) => {
                     fs.renameSync(tempFilePath, newFilePath); // Di chuyển file vào thư mục bài viết
                     imageUrl = newImage;
                 } else {
-                    return res.status(400).json({ status: false, message: "Uploaded file not found" });
+                    return res.status(251).json({ status: false, message: "Uploaded file not found" });
                 }
             }
         }
@@ -157,7 +152,7 @@ router.put("/posts/:id", upload.single('image'), async (req, res) => {
         const result = await data.funcJSON('func_updatepost', `( ${id}, '${title}', '${imageUrl}', '${content}', '${author}', ${categoryId} )`);
 
         if (!result || result.status !== 200) {
-            return res.status(500).json({ status: false, message: "Failed to update post", error: result });
+            return res.status(250).json({ status: false, message: "Failed to update post", error: result });
         }
 
         res.status(200).json(result); // Trả về thông tin bài viết đã được cập nhật
@@ -404,38 +399,5 @@ router.put("/highlightCategory", async (req, res) => {
     }
 });
 
-
-// exports.updatePostHighlightOrder = async (req, res) => {
-//     try {
-//         const { postId, highlightOrder } = req.body;
-
-//         // Gọi function PostgreSQL
-//         const result = await db.any(
-//             `SELECT public.update_post_highlight_json($1, $2) AS result`,
-//             [postId, highlightOrder]
-//         );
-
-//         const resultData = result[0].result;
-
-//         if (resultData.status === 200) {
-//             res.status(200).json({
-//                 status: 200,
-//                 message: resultData.message,
-//                 postId: resultData.postId,
-//                 newHighlightOrder: resultData.newHighlightOrder
-//             });
-//         } else {
-//             res.status(resultData.status).json({
-//                 status: resultData.status,
-//                 message: resultData.message
-//             });
-//         }
-//     } catch (error) {
-//         res.status(500).json({ error: error.message });
-//     }
-// };
-
-// Category Highlight routes
-router.put("/category-highlights", categoryHighlightController.updateCategoryHighlightOrder);
 
 module.exports = router;
