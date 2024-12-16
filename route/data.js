@@ -32,7 +32,7 @@ router.get("/categories", async (req, res) => {
         res.status(200).json(result);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: false, mess: "Internal Server Error", error });
+        res.status(222).json({ status: false, mess: "Internal Server Error", error });
     }
 });
 //...............................
@@ -44,7 +44,37 @@ router.get("/posts", async (req, res) => {
         res.status(200).json(result);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: false, mess: "Internal Server Error", error });
+        res.status(222).json({ status: false, mess: "Internal Server Error", error });
+    }
+});
+
+router.get("/posts/:categoryId/latest-posts", async (req, res) => {
+    const { categoryId } = req.params;
+    const { excludePostId } = req.query;
+
+    try {
+        // Kiểm tra xem categoryId có hợp lệ không
+        if (!categoryId) {
+            return res.status(253).json({ status: false, number: 253, mes: "Format Err" });
+        }
+
+        // Gọi hàm Postgres với tham số categoryId và excludePostId
+        const result = await data.funcTable(
+            "func_get_latest_posts_by_category",
+            `(${categoryId}, ${excludePostId || "NULL"})`
+        );
+
+        // Trả về kết quả nếu thành công
+        res.status(200).json(result);
+    } catch (error) {
+        console.error("Error fetching latest posts by category:", error);
+
+        // Xử lý lỗi và trả về thông báo lỗi
+        res.status(222).json({
+            status: false,
+            message: "Internal Server Error",
+            error: error.message,
+        });
     }
 });
 
@@ -56,7 +86,7 @@ router.post("/posts", upload.single('image'), async (req, res) => {
 
         // Kiểm tra nếu có trường bị thiếu
         if (!title || !content || !author || !categoryId || !req.file) {
-            return res.status(400).json({ status: false, number: 253, mes: "Format Err" });
+            return res.status(253).json({ status: false, number: 253, mes: "Format Err" });
         }
 
         const url = `uploads/${req.file.filename}`;
@@ -91,18 +121,18 @@ router.post("/posts", upload.single('image'), async (req, res) => {
         res.status(200).json(updateResult);
     } catch (error) {
         console.error("Error:", error.message);
-        res.status(500).json({ status: false, message: "Server Error", error: error.message });
+        res.status(222).json({ status: false, message: "Server Error", error: error.message });
     }
 });
 
 // Cập nhật bài viết
 router.put("/posts/:id", upload.single('image'), async (req, res) => {
-    const { id } = req.params; // Lấy ID bài viết từ params
+    const { id } = req.params;
     const { title, content, author, categoryId, highlightOrder } = req.body;
 
     // Kiểm tra nếu thiếu trường
     if (!title || !content || !author || !categoryId) {
-        return res.status(400).json({ status: false, number: 253, mes: "Format Err" });
+        return res.status(253).json({ status: false, number: 253, mes: "Format Err" });
     }
 
     try {
@@ -152,13 +182,13 @@ router.put("/posts/:id", upload.single('image'), async (req, res) => {
         const result = await data.funcJSON('func_updatepost', `( ${id}, '${title}', '${imageUrl}', '${content}', '${author}', ${categoryId} )`);
 
         if (!result || result.status !== 200) {
-            return res.status(250).json({ status: false, message: "Failed to update post", error: result });
+            return res.status(250).json(result);
         }
 
         res.status(200).json(result); // Trả về thông tin bài viết đã được cập nhật
     } catch (error) {
         console.error("Error:", error.message);
-        res.status(500).json({ status: false, message: "Server Error", error: error.message });
+        res.status(222).json({ status: false, message: "Server Error", error: error.message });
     }
 });
 
@@ -170,8 +200,8 @@ router.delete("/posts/:postId", async (req, res) => {
         const result = await data.funcJSON('func_delete_post_json', `(${postId})`);
 
         // Kiểm tra status trả về từ function
-        if (result.status === 404) {
-            return res.status(404).json(result); // Trả về nếu không tìm thấy
+        if (result.status === 256) {
+            return res.status(254).json(result); // Trả về nếu không tìm thấy
         }
 
         // Đường dẫn tới folder chứa hình ảnh của postID
@@ -179,7 +209,7 @@ router.delete("/posts/:postId", async (req, res) => {
 
         // Kiểm tra xem folder có tồn tại không
         if (!fs.existsSync(postDir)) {
-            return res.status(404).json({
+            return res.status(253).json({
                 status: false,
                 message: `Folder for postID ${postId} not found`,
             });
@@ -190,14 +220,14 @@ router.delete("/posts/:postId", async (req, res) => {
             fs.rmSync(postDir, { recursive: true, force: true });
         } catch (error) {
             console.error("Error deleting folder:", error.message);
-            return res.status(500).json({ status: false, message: "Server error", error: error.message });
+            return res.status(222).json({ status: false, message: "Server error", error: error.message });
         }
 
         // Trả về kết quả thành công
         return res.status(200).json(result);
     } catch (error) {
         console.error(error);
-        return res.status(500).json({
+        return res.status(222).json({
             status: false,
             message: "Internal Server Error",
             error: error.message,
@@ -212,14 +242,14 @@ router.get("/postsAdmin", async (req, res) => {
         res.status(200).json(result);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: false, mess: "Internal Server Error", error });
+        res.status(222).json({ status: false, mess: "Internal Server Error", error });
     }
 });
 
 router.get("/posts/:id", async (req, res) => {
     const { id } = req.params;
     if (!id) {
-        return res.status(400).json({ status: false, number: 253, mes: "Format Err" });
+        return res.status(253).json({ status: false, number: 253, mes: "Format Err" });
     }
 
     try {
@@ -227,7 +257,7 @@ router.get("/posts/:id", async (req, res) => {
         res.status(200).json(result);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: false, mess: "Internal Server Error", error });
+        res.status(222).json({ status: false, mess: "Internal Server Error", error });
     }
 });
 
@@ -239,7 +269,7 @@ router.post("/upload-image/:postID", upload.single("image"), async (req, res) =>
         const { file } = req;
 
         if (!file) {
-            return res.status(400).json({ status: false, message: "No file uploaded" });
+            return res.status(253).json({ status: false, message: "No file uploaded" });
         }
 
         const postDir = path.join(__dirname, '..', 'uploads', postID);
@@ -258,7 +288,7 @@ router.post("/upload-image/:postID", upload.single("image"), async (req, res) =>
         });
     } catch (error) {
         console.error("Error uploading image:", error.message);
-        res.status(500).json({ status: false, message: "Server error", error: error.message });
+        res.status(222).json({ status: false, message: "Server error", error: error.message });
     }
 });
 
@@ -271,7 +301,7 @@ router.delete("/delete-images/:postID", async (req, res) => {
 
         // Kiểm tra xem folder có tồn tại không
         if (!fs.existsSync(postDir)) {
-            return res.status(404).json({
+            return res.status(232).json({
                 status: false,
                 message: `Folder for postID ${postID} not found`,
             });
@@ -295,7 +325,7 @@ router.delete("/delete-images/:postID", async (req, res) => {
         });
     } catch (error) {
         console.error("Error deleting images:", error.message);
-        res.status(500).json({ status: false, message: "Server error", error: error.message });
+        res.status(222).json({ status: false, message: "Server error", error: error.message });
     }
 });
 
@@ -308,7 +338,7 @@ router.delete("/delete-images-folder/:postID", async (req, res) => {
 
         // Kiểm tra xem folder có tồn tại không
         if (!fs.existsSync(postDir)) {
-            return res.status(404).json({
+            return res.status(232).json({
                 status: false,
                 message: `Folder for postID ${postID} not found`,
             });
@@ -321,7 +351,7 @@ router.delete("/delete-images-folder/:postID", async (req, res) => {
         });
     } catch (error) {
         console.error("Error deleting folder:", error.message);
-        res.status(500).json({ status: false, message: "Server error", error: error.message });
+        res.status(222).json({ status: false, message: "Server error", error: error.message });
     }
 });
 
@@ -331,34 +361,30 @@ router.put("/highlightPost", async (req, res) => {
 
     // Kiểm tra nếu thiếu trường
     if (!postId || highlightOrder === undefined || highlightOrder === null) {
-        return res.status(400).json({ status: false, number: 253, mes: "Format Err" });
+        return res.status(253).json({ status: false, number: 253, mes: "Format Err" });
     }
 
     try {
         const result = await data.funcJSON('func_update_post_highlight_json', `( ${postId}, ${highlightOrder} )`);
 
         if (!result) {
-            return res.status(500).json({ status: false, message: "Database did not return a response." });
+            return res.status(221).json({ status: false, message: "Database did not return a response." });
         }
 
         // Xử lý phản hồi từ hàm PostgreSQL
         const { status, message, data: responseData } = result;
 
         // Nếu phản hồi không thành công
-        if (status !== 200) {
+        if (!status) {
             return res.status(400).json({ status: false, message });
         }
 
         // Thành công
-        return res.status(200).json({
-            status: true,
-            message,
-            data: responseData,
-        });
+        res.status(200).json(result);
 
     } catch (error) {
         console.error("Error:", error.message);
-        res.status(500).json({ status: false, message: "Server Error", error: error.message });
+        res.status(222).json({ status: false, message: "Server Error", error: error.message });
     }
 });
 
@@ -375,7 +401,7 @@ router.put("/highlightCategory", async (req, res) => {
         const result = await data.funcJSON('func_update_category_highlight_json', `( ${postId}, ${highlightOrder} )`);
 
         if (!result) {
-            return res.status(500).json({ status: false, message: "Database did not return a response." });
+            return res.status(221).json({ status: false, message: "Database did not return a response." });
         }
 
         // Xử lý phản hồi từ hàm PostgreSQL
@@ -387,15 +413,11 @@ router.put("/highlightCategory", async (req, res) => {
         }
 
         // Thành công
-        return res.status(200).json({
-            status: true,
-            message,
-            data: responseData,
-        });
+        res.status(200).json(result);
 
     } catch (error) {
         console.error("Error:", error.message);
-        res.status(500).json({ status: false, message: "Server Error", error: error.message });
+        res.status(222).json({ status: false, message: "Server Error", error: error.message });
     }
 });
 
