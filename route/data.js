@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require("path");
 const data = require("./dataProcess");
 const mime = require('mime-types');
-
+const axios = require("axios");
 
 // Thiết lập multer để upload file
 const storage = multer.diskStorage({
@@ -263,33 +263,91 @@ router.get("/posts/:id", async (req, res) => {
 
 
 
-router.post("/upload-image/:postID", upload.single("image"), async (req, res) => {
-    try {
-        const { postID } = req.params;
-        const { file } = req;
+// router.post("/upload-image/:postID", upload.single("image"), async (req, res) => {
+//     try {
+//         const { postID } = req.params;
+//         const { file } = req;
 
-        if (!file) {
-            return res.status(253).json({ status: false, message: "No file uploaded" });
-        }
+//         if (!file) {
+//             return res.status(253).json({ status: false, message: "No file uploaded" });
+//         }
 
-        const postDir = path.join(__dirname, '..', 'uploads', postID);
-        if (!fs.existsSync(postDir)) {
-            fs.mkdirSync(postDir, { recursive: true });
-        }
+//         const postDir = path.join(__dirname, '..', 'uploads', postID);
+//         if (!fs.existsSync(postDir)) {
+//             fs.mkdirSync(postDir, { recursive: true });
+//         }
 
-        const newFilePath = path.join(postDir, file.filename);
-        fs.renameSync(file.path, newFilePath);
+//         const newFilePath = path.join(postDir, file.filename);
+//         fs.renameSync(file.path, newFilePath);
 
-        const imageUrl = `uploads/${postID}/${file.filename}`;
-        res.status(200).json({
-            status: true,
-            message: "Image uploaded successfully",
-            imageUrl: imageUrl,
-        });
-    } catch (error) {
-        console.error("Error uploading image:", error.message);
-        res.status(222).json({ status: false, message: "Server error", error: error.message });
+//         const imageUrl = `uploads/${postID}/${file.filename}`;
+//         res.status(200).json({
+//             status: true,
+//             message: "Image uploaded successfully",
+//             imageUrl: imageUrl,
+//         });
+//     } catch (error) {
+//         console.error("Error uploading image:", error.message);
+//         res.status(222).json({ status: false, message: "Server error", error: error.message });
+//     }
+// });
+
+router.post("/upload-image/:postID", async (req, res) => {
+  try {
+    const { postID } = req.params;
+    const { imageData } = req.body; // Có thể là URL hoặc Base64
+
+    if (!imageData) {
+      return res.status(400).json({ status: false, message: "No image data provided" });
     }
+
+    // Tạo thư mục theo postID
+    const postDir = path.join(__dirname, "..", "uploads", postID);
+    if (!fs.existsSync(postDir)) {
+      fs.mkdirSync(postDir, { recursive: true });
+    }
+
+    let fileName;
+    let filePath;
+
+    // Xử lý nếu là Base64
+    if (imageData.startsWith("data:image/")) {
+      // Lấy định dạng ảnh từ Base64
+      const mimeType = imageData.match(/data:image\/([a-zA-Z]+);base64,/)[1];
+      const base64Data = imageData.replace(/^data:image\/[a-zA-Z]+;base64,/, "");
+      fileName = `${Date.now()}.${mimeType}`;
+      filePath = path.join(postDir, fileName);
+
+      // Lưu file từ Base64
+      fs.writeFileSync(filePath, Buffer.from(base64Data, "base64"));
+    } 
+    // Xử lý nếu là URL
+    else if (imageData.startsWith("http://") || imageData.startsWith("https://")) {
+      // Fetch ảnh từ URL
+      const response = await axios.get(imageData, { responseType: "arraybuffer" });
+
+      // Lấy định dạng ảnh từ header
+      const mimeType = response.headers["content-type"].split("/")[1];
+      fileName = `${Date.now()}.${mimeType}`;
+      filePath = path.join(postDir, fileName);
+
+      // Lưu file từ URL
+      fs.writeFileSync(filePath, response.data);
+    } else {
+      return res.status(400).json({ status: false, message: "Invalid image data format" });
+    }
+
+    // Trả về đường dẫn ảnh sau khi lưu
+    const savedImageUrl = `uploads/${postID}/${fileName}`;
+    res.status(200).json({
+      status: true,
+      message: "Image uploaded successfully",
+      imageUrl: savedImageUrl,
+    });
+  } catch (error) {
+    console.error("Error uploading image:", error.message);
+    res.status(500).json({ status: false, message: "Server error", error: error.message });
+  }
 });
 
 router.delete("/delete-images/:postID", async (req, res) => {
@@ -408,7 +466,7 @@ router.put("/highlightCategory", async (req, res) => {
         const { status, message, data: responseData } = result;
 
         // Nếu phản hồi không thành công
-        if (status !== 200) {
+        if (!status) {
             return res.status(400).json({ status: false, message });
         }
 
