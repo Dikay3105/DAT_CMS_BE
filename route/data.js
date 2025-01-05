@@ -261,37 +261,6 @@ router.get("/posts/:id", async (req, res) => {
     }
 });
 
-
-
-// router.post("/upload-image/:postID", upload.single("image"), async (req, res) => {
-//     try {
-//         const { postID } = req.params;
-//         const { file } = req;
-
-//         if (!file) {
-//             return res.status(253).json({ status: false, message: "No file uploaded" });
-//         }
-
-//         const postDir = path.join(__dirname, '..', 'uploads', postID);
-//         if (!fs.existsSync(postDir)) {
-//             fs.mkdirSync(postDir, { recursive: true });
-//         }
-
-//         const newFilePath = path.join(postDir, file.filename);
-//         fs.renameSync(file.path, newFilePath);
-
-//         const imageUrl = `uploads/${postID}/${file.filename}`;
-//         res.status(200).json({
-//             status: true,
-//             message: "Image uploaded successfully",
-//             imageUrl: imageUrl,
-//         });
-//     } catch (error) {
-//         console.error("Error uploading image:", error.message);
-//         res.status(222).json({ status: false, message: "Server error", error: error.message });
-//     }
-// });
-
 router.post("/upload-image/:postID", async (req, res) => {
   try {
     const { postID } = req.params;
